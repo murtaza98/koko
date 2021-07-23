@@ -6,3 +6,7 @@ export interface IStatsStorage {
     username2: string;
     dateTime: Date;
 }
+
+export interface IMonthlyStatsStorage {
+    [yearMonth: string]: Array<string>;
+}

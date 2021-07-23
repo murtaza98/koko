@@ -1,4 +1,4 @@
-import { IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
+import { IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
 import { RocketChatAssociationModel, RocketChatAssociationRecord } from '@rocket.chat/apps-engine/definition/metadata';
 import { IRoom } from '@rocket.chat/apps-engine/definition/rooms';
 import { UIKitViewSubmitInteractionContext } from '@rocket.chat/apps-engine/definition/uikit';
@@ -9,7 +9,7 @@ import { createPraiseBlocks } from '../blocks/PraiseBlocks';
 import { KokoApp } from '../KokoApp';
 import { getDirect, getMembers, notifyUser, random, sendMessage } from '../lib/helpers';
 import { praiseRegisteredModal } from '../modals/PraiseModal';
-import { IKarmaStorage, IPraiserKarmaStorage } from '../storage/IKarmaStorage';
+import { IKarmaStorage, IPraiserKarmaStorage, IMonthlyKarmaStorage, IMonthlyPraiserKarmaStorage } from '../storage/IKarmaStorage';
 
 export class KokoPraise {
     public sendScore = false;
@@ -209,6 +209,24 @@ export class KokoPraise {
         return false;
     }
 
+    public async monthScore(read: IRead, http: IHttp) {
+        const monthlyPraiserKarmaAssoc = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, 'monthlyPraiserKarma');
+        const monthlyPraiserKarmaData = await read.getPersistenceReader().readByAssociation(monthlyPraiserKarmaAssoc);
+        if (monthlyPraiserKarmaData && monthlyPraiserKarmaData.length > 0 && monthlyPraiserKarmaData[0]) {
+            const monthlyPraiserKarma = monthlyPraiserKarmaData[0] as IMonthlyPraiserKarmaStorage;
+            const yearMonth = new Date().getFullYear() + '-' + ('0' + (new Date().getMonth())).slice(-2); // Do not add 1 to get month, we want to get previous month
+            if (monthlyPraiserKarma[yearMonth]) {
+                for (const user of monthlyPraiserKarma[yearMonth]) {
+                    const username = Buffer.from(user, 'base64').toString('utf8') as string;
+                    const webhookUrl = await read.getEnvironmentReader().getSettings().getValueById('AllStars_Webhook');
+                    if (username && webhookUrl) {
+                        await http.post(webhookUrl, { data: { username, type: 'Koko Thanks' } });
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * Sends a praise message to kokoPostPraiseRoom
      *
@@ -225,6 +243,16 @@ export class KokoPraise {
         if (!karma) {
             karma = {};
         }
+        const monhtlyKarmaAssoc = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, 'monthlyKarma');
+        const monhtlyKarmaData = await read.getPersistenceReader().readByAssociation(monhtlyKarmaAssoc);
+        let monthlyKarma = monhtlyKarmaData && monhtlyKarmaData.length > 0 && monhtlyKarmaData[0] as IMonthlyKarmaStorage;
+        if (!monthlyKarma) {
+            monthlyKarma = {};
+        }
+        const yearMonth = new Date().getFullYear() + '-' + ('0' + (new Date().getMonth() + 1)).slice(-2);
+        if (!monthlyKarma[yearMonth]) {
+            monthlyKarma[yearMonth] = [];
+        }
 
         for (let username of usernames) {
             // Adds 1 karma points to praised user
@@ -234,8 +262,12 @@ export class KokoPraise {
             } else {
                 karma[username] = 1;
             }
+            if (monthlyKarma[yearMonth].indexOf(username) === -1) {
+                monthlyKarma[yearMonth].push(username);
+            }
         }
         await persistence.updateByAssociation(karmaAssoc, karma);
+        await persistence.updateByAssociation(monhtlyKarmaAssoc, monthlyKarma);
 
         const praiserKarmaAssoc = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, 'praiserKarma');
         const praiserKarmaData = await read.getPersistenceReader().readByAssociation(praiserKarmaAssoc);
@@ -244,13 +276,27 @@ export class KokoPraise {
             praiserKarma = {};
         }
 
+        const monthlyPraiserKarmaAssoc = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, 'monthlyPraiserKarma');
+        const monthlyPraiserKarmaData = await read.getPersistenceReader().readByAssociation(monthlyPraiserKarmaAssoc);
+        let monthlyPraiserKarma = monthlyPraiserKarmaData && monthlyPraiserKarmaData.length > 0 && monthlyPraiserKarmaData[0] as IMonthlyPraiserKarmaStorage;
+        if (!monthlyPraiserKarma) {
+            monthlyPraiserKarma = {};
+        }
+        if (!monthlyPraiserKarma[yearMonth]) {
+            monthlyPraiserKarma[yearMonth] = [];
+        }
+
         const senderUsername = Buffer.from(sender.username).toString('base64') as string;
         if (praiserKarma[senderUsername]) {
             praiserKarma[senderUsername] += 1;
         } else {
             praiserKarma[senderUsername] = 1;
         }
+        if (monthlyPraiserKarma[yearMonth].indexOf(senderUsername) === -1) {
+            monthlyPraiserKarma[yearMonth].push(senderUsername);
+        }
         await persistence.updateByAssociation(praiserKarmaAssoc, praiserKarma);
+        await persistence.updateByAssociation(monthlyPraiserKarmaAssoc, monthlyPraiserKarma);
 
         let msg;
         let replaceUsernames;

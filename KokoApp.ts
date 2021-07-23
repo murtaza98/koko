@@ -279,8 +279,20 @@ export class KokoApp extends App implements IUIKitInteractionHandler {
                     data: { appId: this.getID() },
                 },
                 processor: async (jobContext, read, modify, http, persistence) => {
-                    this.kokoPraise.run(read, modify, persistence, undefined, undefined, this.kokoPraise.sendScore ? 'praisers' : undefined);
+                    await this.kokoPraise.run(read, modify, persistence, undefined, undefined, this.kokoPraise.sendScore ? 'praisers' : undefined);
                     this.kokoPraise.sendScore = !this.kokoPraise.sendScore;
+                },
+            },
+            {
+                id: 'monthlyScore',
+                startupSetting: {
+                    type: StartupType.RECURRING,
+                    interval: '0 12 1 * *',
+                    data: { appId: this.getID() },
+                },
+                processor: async (jobContext, read, modify, http, persistence) => {
+                    await this.kokoPraise.monthScore(read, http);
+                    await this.kokoOneOnOne.monthScore(read, http);
                 },
             },
             {
@@ -291,7 +303,7 @@ export class KokoApp extends App implements IUIKitInteractionHandler {
                     data: { appId: this.getID() },
                 },
                 processor: async (jobContext, read, modify, http, persistence) => {
-                    this.kokoQuestion.run(read, modify, persistence);
+                    await this.kokoQuestion.run(read, modify, persistence);
                 },
             },
             {
@@ -302,7 +314,7 @@ export class KokoApp extends App implements IUIKitInteractionHandler {
                     data: { appId: this.getID() },
                 },
                 processor: async (jobContext, read, modify, http, persistence) => {
-                    this.kokoOneOnOne.run(read, modify, persistence);
+                    await this.kokoOneOnOne.run(read, modify, persistence);
                 },
             },
             {
@@ -313,7 +325,7 @@ export class KokoApp extends App implements IUIKitInteractionHandler {
                     data: { appId: this.getID() },
                 },
                 processor: async (jobContext, read, modify, http, persistence) => {
-                    this.kokoWellness.run(read, modify, persistence);
+                    await this.kokoWellness.run(read, modify, persistence);
                 },
             },
             {
@@ -324,7 +336,7 @@ export class KokoApp extends App implements IUIKitInteractionHandler {
                     data: { appId: this.getID() },
                 },
                 processor: async (jobContext, read, modify, http, persistence) => {
-                    this.kokoValues.run(read, modify, persistence);
+                    await this.kokoValues.run(read, modify, persistence);
                 },
             },
         ]);

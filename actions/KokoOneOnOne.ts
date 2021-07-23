@@ -230,7 +230,7 @@ export class KokoOneOnOne {
                 for (const username of monthlyStats[yearMonth]) {
                     const webhookUrl = await read.getEnvironmentReader().getSettings().getValueById('AllStars_Webhook');
                     if (username && webhookUrl) {
-                        await http.post(webhookUrl, { data: { username, type: 'Koko Thanks' } });
+                        await http.post(webhookUrl, { data: { username, type: 'Koko 1-1' } });
                     }
                 }
             }

@@ -160,7 +160,7 @@ export class KokoPraise {
      * Then sends a praise to the selected users
      */
     // tslint:disable-next-line:max-line-length
-    public async submit({ context, modify, read, persistence }: { context: UIKitViewSubmitInteractionContext, modify: IModify, read: IRead, persistence: IPersistence }) {
+    public async submit({ context, modify, read, persistence, http }: { context: UIKitViewSubmitInteractionContext, modify: IModify, read: IRead, persistence: IPersistence, http: IHttp }) {
         const data = context.getInteractionData();
         const { praise }: {
             praise: {
@@ -181,7 +181,7 @@ export class KokoPraise {
                 errors,
             });
         }
-        await this.sendPraise(read, modify, persistence, data.user, praise.who, praise.why);
+        await this.sendPraise(read, modify, persistence, data.user, praise.who, praise.why, http);
         const modal = await praiseRegisteredModal({ read, modify, data });
         return context.getInteractionResponder().updateModalViewResponse(modal);
     }
@@ -209,24 +209,6 @@ export class KokoPraise {
         return false;
     }
 
-    public async monthScore(read: IRead, http: IHttp) {
-        const monthlyPraiserKarmaAssoc = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, 'monthlyPraiserKarma');
-        const monthlyPraiserKarmaData = await read.getPersistenceReader().readByAssociation(monthlyPraiserKarmaAssoc);
-        if (monthlyPraiserKarmaData && monthlyPraiserKarmaData.length > 0 && monthlyPraiserKarmaData[0]) {
-            const monthlyPraiserKarma = monthlyPraiserKarmaData[0] as IMonthlyPraiserKarmaStorage;
-            const yearMonth = new Date().getFullYear() + '-' + ('0' + (new Date().getMonth())).slice(-2); // Do not add 1 to get month, we want to get previous month
-            if (monthlyPraiserKarma[yearMonth]) {
-                for (const user of monthlyPraiserKarma[yearMonth]) {
-                    const username = Buffer.from(user, 'base64').toString('utf8') as string;
-                    const webhookUrl = await read.getEnvironmentReader().getSettings().getValueById('AllStars_Webhook');
-                    if (username && webhookUrl) {
-                        await http.post(webhookUrl, { data: { username, type: 'Koko Thanks' } });
-                    }
-                }
-            }
-        }
-    }
-
     /**
      * Sends a praise message to kokoPostPraiseRoom
      *
@@ -236,7 +218,7 @@ export class KokoPraise {
      * @param read IRead
      * @param modify IModify
      */
-    private async sendPraise(read: IRead, modify: IModify, persistence: IPersistence, sender: IUser, usernames: Array<string>, text: string) {
+    private async sendPraise(read: IRead, modify: IModify, persistence: IPersistence, sender: IUser, usernames: Array<string>, text: string, http: IHttp) {
         const karmaAssoc = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, 'karma');
         const karmaData = await read.getPersistenceReader().readByAssociation(karmaAssoc);
         let karma = karmaData && karmaData.length > 0 && karmaData[0] as IKarmaStorage;
@@ -256,14 +238,18 @@ export class KokoPraise {
 
         for (let username of usernames) {
             // Adds 1 karma points to praised user
-            username = Buffer.from(username).toString('base64') as string;
-            if (karma[username]) {
-                karma[username] += 1;
+            const base64username = Buffer.from(username).toString('base64') as string;
+            if (karma[base64username]) {
+                karma[base64username] += 1;
             } else {
-                karma[username] = 1;
+                karma[base64username] = 1;
             }
-            if (monthlyKarma[yearMonth].indexOf(username) === -1) {
-                monthlyKarma[yearMonth].push(username);
+            if (monthlyKarma[yearMonth].indexOf(base64username) === -1) {
+                monthlyKarma[yearMonth].push(base64username);
+                const webhookUrl = await read.getEnvironmentReader().getSettings().getValueById('AllStars_Webhook');
+                if (username && webhookUrl) {
+                    await http.post(webhookUrl, { data: { username, type: 'Koko Thanks' } });
+                }
             }
         }
         await persistence.updateByAssociation(karmaAssoc, karma);
@@ -294,6 +280,10 @@ export class KokoPraise {
         }
         if (monthlyPraiserKarma[yearMonth].indexOf(senderUsername) === -1) {
             monthlyPraiserKarma[yearMonth].push(senderUsername);
+            const webhookUrl = await read.getEnvironmentReader().getSettings().getValueById('AllStars_Webhook');
+            if (sender.username && webhookUrl) {
+                await http.post(webhookUrl, { data: { username: sender.username, type: 'Koko Thanks' } });
+            }
         }
         await persistence.updateByAssociation(praiserKarmaAssoc, praiserKarma);
         await persistence.updateByAssociation(monthlyPraiserKarmaAssoc, monthlyPraiserKarma);

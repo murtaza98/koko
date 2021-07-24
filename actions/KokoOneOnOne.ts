@@ -106,7 +106,7 @@ export class KokoOneOnOne {
      * @param text the message to get username or praise from
      */
     // tslint:disable-next-line:max-line-length
-    public async answer(read: IRead, modify: IModify, persistence: IPersistence, sender: IUser, room: IRoom, data: IListenStorage, text: string) {
+    public async answer(read: IRead, modify: IModify, persistence: IPersistence, sender: IUser, room: IRoom, data: IListenStorage, text: string, http: IHttp) {
         if (data.listen === 'one-on-one') {
             // Removes listening status for user
             const association = new RocketChatAssociationRecord(RocketChatAssociationModel.USER, sender.id);
@@ -125,6 +125,10 @@ export class KokoOneOnOne {
                 }
                 if (monthlyStats[yearMonth].indexOf(sender.username) === -1) {
                     monthlyStats[yearMonth].push(sender.username);
+                    const webhookUrl = await read.getEnvironmentReader().getSettings().getValueById('AllStars_Webhook');
+                    if (sender.username && webhookUrl) {
+                        await http.post(webhookUrl, { data: { username: sender.username, type: 'Koko 1-1' } });
+                    }
                 }
                 await persistence.updateByAssociation(monhtlyStatsAssoc, monthlyStats);
 
@@ -217,23 +221,6 @@ export class KokoOneOnOne {
                 }
             }
             notifyUser(app, modify, room, sender, message);
-        }
-    }
-
-    public async monthScore(read: IRead, http: IHttp) {
-        const monthlyStatsAssoc = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, 'monthlyStats');
-        const monthlyStatsData = await read.getPersistenceReader().readByAssociation(monthlyStatsAssoc);
-        if (monthlyStatsData && monthlyStatsData.length > 0 && monthlyStatsData[0]) {
-            const monthlyStats = monthlyStatsData[0] as IMonthlyStatsStorage;
-            const yearMonth = new Date().getFullYear() + '-' + ('0' + (new Date().getMonth())).slice(-2); // Do not add 1 to get month, we want to get previous month
-            if (monthlyStats[yearMonth]) {
-                for (const username of monthlyStats[yearMonth]) {
-                    const webhookUrl = await read.getEnvironmentReader().getSettings().getValueById('AllStars_Webhook');
-                    if (username && webhookUrl) {
-                        await http.post(webhookUrl, { data: { username, type: 'Koko 1-1' } });
-                    }
-                }
-            }
         }
     }
 }

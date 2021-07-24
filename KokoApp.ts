@@ -138,7 +138,7 @@ export class KokoApp extends App implements IUIKitInteractionHandler {
         const data = context.getInteractionData();
         switch (data.view.id) {
             case 'praise':
-                return this.kokoPraise.submit({ context, modify, read, persistence });
+                return this.kokoPraise.submit({ context, modify, read, persistence, http });
             case 'question':
                 return this.kokoQuestion.submit({ context, modify, read, persistence });
             case 'values':
@@ -281,18 +281,6 @@ export class KokoApp extends App implements IUIKitInteractionHandler {
                 processor: async (jobContext, read, modify, http, persistence) => {
                     await this.kokoPraise.run(read, modify, persistence, undefined, undefined, this.kokoPraise.sendScore ? 'praisers' : undefined);
                     this.kokoPraise.sendScore = !this.kokoPraise.sendScore;
-                },
-            },
-            {
-                id: 'monthlyScore',
-                startupSetting: {
-                    type: StartupType.RECURRING,
-                    interval: '0 12 1 * *',
-                    data: { appId: this.getID() },
-                },
-                processor: async (jobContext, read, modify, http, persistence) => {
-                    await this.kokoPraise.monthScore(read, http);
-                    await this.kokoOneOnOne.monthScore(read, http);
                 },
             },
             {

@@ -113,7 +113,7 @@ export class KokoOneOnOne {
             persistence.removeByAssociation(association);
 
             if (text === 'Yes') {
-                const monhtlyStatsAssoc = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, 'monthlyStats');
+                const monhtlyStatsAssoc = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, 'one-on-one-monthly-stats');
                 const monhtlyStatsData = await read.getPersistenceReader().readByAssociation(monhtlyStatsAssoc);
                 let monthlyStats = monhtlyStatsData && monhtlyStatsData.length > 0 && monhtlyStatsData[0] as IMonthlyStatsStorage;
                 if (!monthlyStats) {

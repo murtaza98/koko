@@ -15,3 +15,10 @@ export interface IValueAnswerStorage extends Array<IValueAnswer> { }
 export interface IValuesPointStorage {
     [username: string]: number;
 }
+
+/**
+ * Holds the monthly value
+ */
+ export interface IMonthlyValuesStorage {
+    [yearMonth: string]: Array<string>;
+}

@@ -142,7 +142,7 @@ export class KokoApp extends App implements IUIKitInteractionHandler {
             case 'question':
                 return this.kokoQuestion.submit({ context, modify, read, persistence });
             case 'values':
-                return this.kokoValues.submit({ context, modify, read, persistence });
+                return this.kokoValues.submit({ context, modify, read, persistence, http });
         }
         return {
             success: true,

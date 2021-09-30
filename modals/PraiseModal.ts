@@ -58,6 +58,7 @@ export async function praiseModal({ app, data, read, modify }: {
             type: TextObjectType.PLAINTEXT,
             text: `@${data.user.username} says thanks for...`,
             emoji: true,
+            multiline: true,
         },
     });
 

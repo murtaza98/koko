@@ -94,7 +94,7 @@ export async function valuesModal({ app, read, modify }: {
     });
     block.addInputBlock({
         blockId: 'values',
-        element: block.newPlainTextInputElement({ actionId: 'reason' }),
+        element: block.newPlainTextInputElement({ actionId: 'reason', multiline: true }),
         label: {
             type: TextObjectType.PLAINTEXT,
             text: `What was it?`,
